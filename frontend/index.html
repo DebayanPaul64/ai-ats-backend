@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI-Powered ATS | Login</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body {
+            background-color: #f4f7f6;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+        }
+        .auth-container {
+            background: white;
+            padding: 40px;
+            border-radius: 10px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+            width: 100%;
+            max-width: 400px;
+        }
+        /* Hide the register form by default */
+        #register-form {
+            display: none; 
+        }
+        .toggle-link {
+            color: #0d6efd;
+            cursor: pointer;
+            text-decoration: underline;
+        }
+    </style>
+</head>
+<body>
+
+<div class="auth-container">
+    <h3 class="text-center mb-4">AI-Powered ATS</h3>
+
+    <div id="login-form">
+        <h5 class="mb-3">Welcome Back</h5>
+        <form id="form-login">
+            <div class="mb-3">
+                <label class="form-label">Email address</label>
+                <input type="email" class="form-control" id="login-email" required>
+            </div>
+            <div class="mb-3">
+                <label class="form-label">Password</label>
+                <input type="password" class="form-control" id="login-password" required>
+            </div>
+            <button type="submit" class="btn btn-primary w-100">Login</button>
+        </form>
+        <div class="mt-3 text-center">
+            <small>Don't have an account? <span class="toggle-link" onclick="toggleForms()">Register here</span></small>
+        </div>
+    </div>
+
+    <div id="register-form">
+        <h5 class="mb-3">Create an Account</h5>
+        <form id="form-register">
+            <div class="mb-3">
+                <label class="form-label">Full Name</label>
+                <input type="text" class="form-control" id="reg-name" required>
+            </div>
+            <div class="mb-3">
+                <label class="form-label">Email address</label>
+                <input type="email" class="form-control" id="reg-email" required>
+            </div>
+            <div class="mb-3">
+                <label class="form-label">Password</label>
+                <input type="password" class="form-control" id="reg-password" required>
+            </div>
+            <div class="mb-3">
+                <label class="form-label">I am a...</label>
+                <select class="form-select" id="reg-role" required>
+                    <option value="candidate">Candidate (Looking for a job)</option>
+                    <option value="recruiter">Recruiter (Hiring)</option>
+                </select>
+            </div>
+            <button type="submit" class="btn btn-success w-100">Register</button>
+        </form>
+        <div class="mt-3 text-center">
+            <small>Already have an account? <span class="toggle-link" onclick="toggleForms()">Login here</span></small>
+        </div>
+    </div>
+</div>
+
+<script>
+    function toggleForms() {
+        const loginForm = document.getElementById('login-form');
+        const registerForm = document.getElementById('register-form');
+        
+        if (loginForm.style.display === 'none') {
+            loginForm.style.display = 'block';
+            registerForm.style.display = 'none';
+        } else {
+            loginForm.style.display = 'none';
+            registerForm.style.display = 'block';
+        }
+    }
+
+    // REGISTRATION LOGIC
+    document.getElementById('form-register').addEventListener('submit', async (e) => {
+        e.preventDefault(); // Prevent the page from refreshing
+        
+        // Capture the inputs
+        const name = document.getElementById('reg-name').value;
+        const email = document.getElementById('reg-email').value;
+        const password = document.getElementById('reg-password').value;
+        const role = document.getElementById('reg-role').value;
+        
+        try {
+            const response = await fetch('http://localhost:8000/register', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ name, email, password, role })
+            });
+            
+            const data = await response.json();
+            
+            if (response.ok) {
+                alert('Registration successful! Please log in.');
+                toggleForms(); // Switch back to the login view automatically
+            } else {
+                alert('Error: ' + data.detail);
+            }
+        } catch (error) {
+            console.error('Registration failed:', error);
+            alert('Could not connect to the server. Is it running?');
+        }
+    });
+
+    // LOGIN LOGIC
+    document.getElementById('form-login').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        
+        const email = document.getElementById('login-email').value;
+        const password = document.getElementById('login-password').value;
+        
+        // Package data as standard form URL encoded (required by OAuth2)
+        const formData = new URLSearchParams();
+        formData.append('username', email);
+        formData.append('password', password);
+        
+        try {
+            const response = await fetch('http://localhost:8000/login', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded'
+                },
+                body: formData
+            });
+            
+            const data = await response.json();
+            
+            if (response.ok) {
+                // 1. Save the token to local storage
+                localStorage.setItem('token', data.access_token);
+                
+                // 2. Decode the JWT to find out if they are a recruiter or candidate
+                const payloadBase64 = data.access_token.split('.')[1];
+                const decodedPayload = JSON.parse(atob(payloadBase64));
+                const userRole = decodedPayload.role;
+                
+                // 3. Save the role and redirect to the correct dashboard (which we will build next!)
+                localStorage.setItem('role', userRole);
+                
+                alert('Login successful! Redirecting...');
+                
+                if (userRole === 'recruiter') {
+                    window.location.href = 'recruiter_dashboard.html';
+                } else {
+                    window.location.href = 'candidate_dashboard.html';
+                }
+                
+            } else {
+                alert('Error: ' + data.detail);
+            }
+        } catch (error) {
+            console.error('Login failed:', error);
+            alert('Could not connect to the server. Is it running?');
+        }
+    });
+</script>
+</body>
+</html>
