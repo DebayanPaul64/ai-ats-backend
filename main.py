@@ -93,8 +93,8 @@ class JobUpdate(BaseModel):
 
 @app.get("/")
 def read_root():
-    return {"message": "Welcome to the AI-Powered ATS API! The server is successfully running."}
-
+    return {"message": "CI/CD Test: The magic bridge is officially working!"}
+    
 # Endpoint to test the database connection
 @app.get("/db-check")
 def check_db_connection():
