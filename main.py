@@ -253,16 +253,16 @@ def create_job(job: JobCreate, current_user: dict = Depends(get_current_user)):
 
 @app.get("/jobs")
 def get_all_jobs():
-    conn = get_db_connection()
-    if conn is None:
-        raise HTTPException(status_code=500, detail="Database connection failed.")
-        
+    conn = None
+    cursor = None
     try:
+        # 1. Connection Logic
+        conn = get_db_connection() # Update this if your connection function is named differently
         cursor = conn.cursor()
         
-        # Fetch all jobs, including the name of the recruiter who posted it
+        # 2. The Updated Query
         query = """
-            SELECT j.job_id, j.title, j.description, j.created_at, u.name AS recruiter_name
+            SELECT j.job_id, j.title, j.description, j.created_at, u.name AS recruiter_name, j.recruiter_id
             FROM Jobs j
             JOIN Users u ON j.recruiter_id = u.user_id
             ORDER BY j.created_at DESC;
@@ -270,23 +270,30 @@ def get_all_jobs():
         cursor.execute(query)
         jobs = cursor.fetchall()
         
-        cursor.close()
-        conn.close()
-        
-        # Format the output into a clean list of dictionaries
-        job_list = []
-        for job in jobs:
-            job_list.append({
-                "job_id": job[0],
-                "title": job[1],
-                "description": job[2],
-                "created_at": job[3],
-                "recruiter_name": job[4]
-            })
-            
-        return {"jobs": job_list}
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        # If something goes wrong, tell the frontend exactly what happened
+        raise HTTPException(status_code=500, detail=f"Database error: {str(e)}")
+        
+    finally:
+        # 3. Close Logic (Runs no matter what to protect the database)
+        if cursor:
+            cursor.close()
+        if conn:
+            conn.close()
+            
+    # 4. Format the Data
+    job_list = []
+    for job in jobs:
+        job_list.append({
+            "job_id": job[0],
+            "title": job[1],
+            "description": job[2],
+            "created_at": job[3],
+            "recruiter_name": job[4],
+            "recruiter_id": job[5]  # The new line that secures your frontend UI
+        })
+        
+    return {"jobs": job_list}
     
 @app.put("/jobs/{job_id}")
 def update_job(job_id: int, job: JobUpdate, current_user: dict = Depends(get_current_user)):
