@@ -420,16 +420,20 @@ async def upload_resume(job_id: int, file: UploadFile = File(...), current_user:
         with open(file_location, "wb+") as file_object:
             shutil.copyfileobj(file.file, file_object)
             
-        # --- NEW AI INTEGRATION ---
+        # --- NEW AI INTEGRATION WITH BUG FIX ---
         # 4. Run the AI pipeline to calculate the Match Score
         raw_resume = extract_text_from_pdf(file_location)
         clean_resume = clean_text(raw_resume)
         clean_job = clean_text(job_description)
         
-        matrix = generate_tfidf_vectors(clean_resume, clean_job)
-        raw_score = calculate_similarity(matrix)
-        final_match_score = get_match_percentage(raw_score)
-        # --------------------------
+        # FIX: Check if the resume had any readable text before doing math
+        if not clean_resume.strip():
+            final_match_score = 0.0  # Assign 0% if it's an image-only or unreadable PDF
+        else:
+            matrix = generate_tfidf_vectors(clean_resume, clean_job)
+            raw_score = calculate_similarity(matrix)
+            final_match_score = get_match_percentage(raw_score)
+        # ---------------------------------------
             
         # 5. Record the application AND the ai_match_score in the database
         insert_query = """
