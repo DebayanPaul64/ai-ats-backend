@@ -17,7 +17,7 @@ app = FastAPI(title="AI-Powered ATS API")
 # Configure CORS to allow frontend to communicate with the backend
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"], # In production, you would restrict this to your actual domain
+    allow_origins=["https://debayanpaul64.github.io"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
